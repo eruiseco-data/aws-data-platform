@@ -1,7 +1,7 @@
 name: terraform-dev
 on:
   pull_request:
-    paths: ["infra/**"]
+    paths: ["infra/**",".github/workflows/terraform_dev.yml"]
   workflow_dispatch:
 
 permissions:
