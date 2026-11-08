@@ -65,7 +65,7 @@ data "aws_iam_policy_document" "github_assume" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:eruiseco-data/aws-data-platform:*"]
+      values   = ["repo:eruiseco-data@228854524/aws-data-platform@1446456729:*"]
     }
   }
 }
