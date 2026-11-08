@@ -29,6 +29,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
     }
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket_public_access_block" "tfstate" {
     bucket = aws_s3_bucket.tfstate.id
 
@@ -36,4 +38,49 @@ resource "aws_s3_bucket_public_access_block" "tfstate" {
     block_public_policy = true
     ignore_public_acls = true
     restrict_public_buckets = true
+}
+
+import {
+  to = aws_iam_openid_connect_provider.github
+  id = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+}
+
+resource "aws_iam_openid_connect_provider" "github" {
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
+}
+
+data "aws_iam_policy_document" "github_assume" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:eruiseco-data/aws-data-platform:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions" {
+  name = "github-actions-aws-data-platform"
+
+  assume_role_policy = data.aws_iam_policy_document.github_assume.json
+}
+
+resource "aws_iam_role_policy_attachment" "github_admin" {
+  role = "github-actions-aws-data-platform"
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+output "github_role_arn" {
+  value = aws_iam_role.github_actions.arn
 }
